@@ -1,0 +1,226 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+        <script src="jscolor.js"></script>
+        <script src="bgm.js"></script>
+        <style>
+            body {
+                background-color: #aaaaaa;
+            }
+
+            div {
+                background-color: white;
+            }
+
+            #toolboxContainer {
+                float: left;
+            }
+
+            button {
+                vertical-align: top;
+            }
+
+            .buttonDefault {
+                background: none;
+                border: 1px solid black;
+                border-collapse: collapse;
+                width: 80px;
+                height: 50px;
+            }
+
+            .buttonInactive {
+                background-color: white;
+            }
+
+            .buttonInactive:hover {
+                background-color: #ffb41e;
+            }
+
+            .buttonActive, .buttonInactive:active {
+                background-color: #ff7700;
+            }
+
+            .gridElement {
+                outline: 1px solid #aaa;
+            }
+
+            #toolboxContainer {
+                width: 160px;
+            }
+        </style>
+    </head>
+    <body>
+        <input id="colorInput" type="hidden" value="000" />
+        <div id="toolboxContainer">
+        </div>
+        <script>
+            // TO FIX
+            // 1. Changing color while eraser is active changes eraser color (fixed).
+            // 2. Clicking pencil button changes pencil color to black despite
+            // the color picker's value (fixed).
+
+            // TO DO
+            // 1. Group buttons to achieve proper click behavior (ready).
+            var click = false;
+            var pencil = { color: "black" };
+            var eraser = { color: "white" };
+            var currentTool = pencil;
+
+            $(document)
+                .ready(initialize)
+                .mousedown(mousedownEventHandler)
+                .mouseup(mouseupEventHandler);
+
+            $("#colorInput").on("change", e => changePencilColor(e.target.value));
+
+            function initialize() {
+                buildGrid();
+                buildToolbox();
+                $("#pencilButton").click();
+            }
+
+            /* Builds the canvas grid as a table. */
+            function buildGrid() {
+                var rows = 50,
+                    cols = 150;
+
+                var table = createEmptyTable();
+
+                for(var i = 0; i < rows; i++) {
+                    table.append(createRow(cols));
+                }
+
+                createEmptyContainer().attr("id", "container").append(table).appendTo("body");
+            }
+
+            /* Populate toolbox. */
+            function buildToolbox() {
+                buttonGroupManager.createGroup("drawing");
+                buttonGroupManager.createButton("drawing", "Lápiz", "pencilButton", () => { currentTool = pencil; });
+                buttonGroupManager.createButton("drawing", "Goma", "eraserButton", () => { currentTool = eraser; });
+                buttonGroupManager.attachGroupToDOM("drawing", "toolboxContainer");
+                $("#toolboxContainer").append(createColorPicker());
+                $("#toolboxContainer").append(createEraseAllButton());
+                $("#toolboxContainer").append(createGridButton());
+            }
+
+            /* Creates and returns a customizable button. */
+            function createButton(text, Class, id, clickHandlers) {
+                var button = $("<button>")
+                    .text(text || "")
+                    .addClass(Class || "")
+                    .attr("id", id || "");
+
+                if(clickHandlers && clickHandlers.length) {
+                    clickHandlers.forEach(function(handler) {
+                        button.on("click", handler);
+                    });
+                }
+
+                return button;
+            }
+
+            /* Creates and returns de erase all button. */
+            function createEraseAllButton() {
+                return createButton("Limpiar", "buttonDefault buttonInactive", "eraseAllButton", [eraseAll]);
+            }
+
+            /* Creates and returns the show/hide grid button. */
+            function createGridButton() {
+                return createButton("Cuadrícula", "buttonDefault buttonInactive", "gridButton", [toggleGrid, e => $(e.target).toggleClass("buttonActive")]);
+            }
+
+            /* Creates and returns the color picker tool. */
+            function createColorPicker() {
+                return createButton("", "buttonDefault jscolor {valueElement:'colorInput', value:'000'}");
+            }
+
+            /* Changes the pencil color to the one in the color parameter. */
+            function changePencilColor(color) {
+                pencil.color = color;
+            }
+
+            /* Cleans the canvas by setting every cell background color
+            to white. */
+            function eraseAll() {
+                $("td").css("background-color", "white");
+            }
+
+            /* Displays/hides the grid. */
+            function toggleGrid() {
+                $("td").toggleClass("gridElement");
+            }
+
+            /* Returns a new canvas container. */
+            function createEmptyContainer() {
+                return $("<div>")
+                    .css("margin-right", "10px")
+                    .css("float", "right")
+                    .css("width", "1000px")
+                    .css("overflow", "hidden")
+                    .css("border", "2px solid black");
+            }
+
+            /* Returns a new empty table. */
+            function createEmptyTable() {
+                return $("<table>")
+                    .append("<tbody>")
+                    .css("border-spacing", 0);
+            }
+
+            /* Returns a new canvas row filled with as many cells as
+            specified in the cols parameter. */
+            function createRow(cols) {
+                var row = $("<tr>");
+
+                for(var i = 0; i < cols; i++) {
+                    row.append(createCell());
+                }
+
+                return row;
+            }
+
+            /* Returns a new canvas cell. */
+            function createCell() {
+                var cell = $("<td>");
+
+                return cell
+                    .css("padding", "5px")
+                    .css("background-color", "white")
+                    .mouseenter(() => cellMouseenterEventHandler(cell))
+                    .on("click", () => changeColor(cell, currentTool.color));
+            }
+
+            /* Enables drawing if left mouse button
+            is being pressed. */
+            function mousedownEventHandler(e) {
+                if(e.which == 1) {
+                    click = true;
+                }
+
+                // previene el drag de las celdas.
+                e.preventDefault();
+            }
+
+            /* Sets the click flag as false to avoid drawing
+            when left mouse button is not being pressed. */
+            function mouseupEventHandler(e) {
+                click = false;
+            }
+
+            /* Changes the cell color whenever the left
+            mouse button is pressed. */
+            function cellMouseenterEventHandler(cell) {
+                if(click === true) {
+                    changeColor(cell, currentTool.color);
+                }
+            }
+
+            /* Changes an object's background  color. */
+            function changeColor(obj, color) {
+                $(obj).css("background-color", color);
+            }
+        </script>
+    </body>
+</html>
